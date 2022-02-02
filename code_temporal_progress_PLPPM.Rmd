@@ -1,0 +1,327 @@
+---
+title: "PLPPM 5020: Temporal Progress"
+output: 
+  html_document:
+    number_sections: true 
+    df_print: paged
+    theme: cosmo
+    toc: true
+    toc_float:
+      collapsed: yes
+    self_contained: yes
+---
+
+# Libraries
+First we need to run (and if necessary, install) some packages that we are going to use for these analyses
+
+```{r message=FALSE, warning=FALSE}
+# This code check if you have the package installed in R
+if (!require(epifitter)) {
+  install.packages("epifitter")
+}
+
+if (!require(tidyverse)) {
+  install.packages("tidyverse")
+}
+
+if (!require(shiny)) {
+  install.packages("shiny")
+}
+if (!require(ggthemes)) {
+  install.packages("ggthemes")
+}
+
+```
+
+
+```{r message=FALSE, warning=FALSE}
+# This code load the packages we'll be using
+library(epifitter)
+library(tidyverse)
+theme_set(cowplot::theme_half_open())
+```
+
+
+
+
+# Simulating disease progress curves
+
+## Models
+
+### Exponential
+
+#### Simulation
+
+```{r}
+exp_data = sim_exponential(N = 100,      # Total time course of the epidemic
+                           dt = 1,      # Time intervals
+                           y0 = 0.01,   # Initial inoculum
+                           r = 0.1,     # Apparent infection rate
+                           n = 1,       # Number or replicates or sample size for each time step
+                           alpha = 0.2  # Variation parameter
+                           ) 
+exp_data
+```
+
+
+##### Graph
+```{r}
+exp_data %>% 
+  ggplot(aes(time, y)) +
+  geom_point()
+```
+
+
+
+
+
+
+### Monomolecular
+#### Simulation
+```{r}
+mono_data = sim_monomolecular(N = 100,      # Total time course of the epidemic
+                              dt = 1,      # Time intervals
+                              y0 = 0.01,   # Initial inoculum
+                              r = 0.1,     # Apparent infection rate
+                              K = 1,       # Maximum asymptote 
+                              n = 1,       # Number or replicates or sample size for each time step
+                              alpha = 0.2  # Variation parameter
+                              )
+mono_data
+```
+
+#### Graph
+```{r}
+mono_data %>% 
+  ggplot(aes(time, y)) +
+  geom_point()
+```
+
+
+
+### Logistic
+#### Simulation
+```{r}
+logi_data = sim_logistic(N = 100,      # Total time course of the epidemic
+                         dt = 1,      # Time intervals
+                         y0 = 0.01,   # Initial inoculum
+                         r = 0.1,     # Apparent infection rate
+                         K = 1,       # Maximum asymptote 
+                         n = 1,       # Number or replicates or sample size for each time step
+                         alpha = 0.2  # Variation parameter
+                         )
+logi_data
+```
+
+
+#### Graph
+```{r}
+logi_data %>% 
+  ggplot(aes(time, y)) +
+  geom_point()
+```
+
+
+
+
+
+### Gompertz
+#### Simulation
+```{r}
+gompi_data = sim_gompertz(N = 100,      # Total time course of the epidemic
+                          dt = 1,      # Time intervals
+                          y0 = 0.01,   # Initial inoculum
+                          r = 0.1,     # Apparent infection rate
+                          K = 1,       # Maximum asymptote 
+                          n = 1,       # Number or replicates or sample size for each time step
+                          alpha = 0.2  # Variation parameter
+                         )
+gompi_data
+```
+
+#### Graph
+```{r}
+gompi_data %>% 
+  ggplot(aes(time, y)) +
+  geom_point()
+```
+
+
+
+### Comparison
+
+```{r}
+data_models = bind_rows(Esponential = exp_data,
+                        monomolecular = mono_data,
+                        Logistic = logi_data,
+                        Gompertz = gompi_data,
+                        .id = "model")
+```
+
+
+```{r}
+data_models %>% 
+  ggplot(aes(time, y, color = model))+
+  geom_point()+
+  ylim(0,1)
+```
+
+
+
+#### Interact
+```{r eval=FALSE, include=T}
+source("sim_app.R")
+
+sim_app()
+```
+
+
+
+
+# Fitting models
+
+## Data
+```{r}
+data("PowderyMildew")
+PowderyMildew
+```
+
+### Visualization
+
+```{r}
+PowderyMildew %>% 
+  ggplot(aes(time,sev, color = irrigation_type))+
+  geom_point()+
+  facet_wrap(~moisture)
+```
+
+
+
+## One disease progress curve
+
+### Filter just one treatment
+```{r}
+single_curve = PowderyMildew %>%
+  filter(irrigation_type == "Overhead",
+         moisture == "Moderate moisture") 
+single_curve
+```
+
+#### Visualization
+```{r}
+single_curve %>% 
+  ggplot(aes(time, sev))+
+  geom_point()
+```
+
+### Fitting
+
+### Linear regression
+```{r}
+linear_fit = fit_lin(time = single_curve$time,
+                     y = single_curve$sev)
+linear_fit
+```
+
+
+```{r fig.height=4, fig.width=8}
+plot_fit(linear_fit)
+```
+
+### Non-linear regression
+
+```{r}
+nonlinear_fit = fit_nlin(time = single_curve$time,
+                         y = single_curve$sev)
+nonlinear_fit
+```
+
+```{r fig.height=4, fig.width=8}
+plot_fit(nonlinear_fit)
+```
+
+
+### Estimate maximun assimptote
+
+```{r}
+assimp_fit = fit_nlin2(time = single_curve$time,
+                       y = single_curve$sev,
+                       starting_par = list(y0 = 0.01, r = 0.03, K = 0.2))
+assimp_fit
+```
+
+```{r fig.height=4, fig.width=8}
+plot_fit(assimp_fit)
+```
+
+
+
+## Multiple DPCs
+
+```{r}
+fit_pd = fit_multi(time_col = "time",
+          intensity_col = "sev",
+          strata_cols = c("irrigation_type", "moisture"),
+          estimate_K = T,
+          nlin = T,
+          data = PowderyMildew)
+
+```
+
+### Model parameters
+```{r}
+fit_pd$Parameters
+```
+
+### Model data
+
+```{r}
+fit_pd$Data
+```
+
+### Visualization
+
+```{r fig.height=4, fig.width=8}
+fit_pd$Data %>% 
+  filter(model == "Gompertz") %>% 
+  ggplot()+
+  geom_point(aes(time, y, color= irrigation_type))+
+  geom_line(aes(time, predicted, color= irrigation_type))+
+  facet_wrap(~moisture)
+```
+
+
+# Area under disease progress curves
+
+## Single DPC
+```{r}
+AUDPC(time = single_curve$time,
+      y = single_curve$sev)
+```
+## Multiple DPCs
+```{r}
+PowderyMildew %>% 
+  group_by(irrigation_type, moisture,block ) %>% 
+  summarise(audpc = AUDPC(time = time, y = sev),
+            audps = AUDPS(time = time, y = sev))
+```
+
+```{r fig.height=4, fig.width=8}
+PowderyMildew %>% 
+  group_by(irrigation_type, moisture,block ) %>% 
+  summarise(audpc = AUDPC(time = time, y = sev),
+            audps = AUDPS(time = time, y = sev)) %>% 
+  ggplot(aes(irrigation_type, audpc, color = moisture)) + 
+  geom_boxplot()
+```
+
+```{r fig.height=4, fig.width=8}
+PowderyMildew %>% 
+  group_by(irrigation_type, moisture,block ) %>% 
+  summarise(audpc = AUDPC(time = time, y = sev),
+            audps = AUDPS(time = time, y = sev)) %>% 
+  ggplot(aes(irrigation_type, audps, color = moisture)) + 
+  geom_boxplot()
+```
+
+
