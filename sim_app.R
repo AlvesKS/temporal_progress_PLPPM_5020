@@ -2,6 +2,7 @@ sim_app = function(){
 
 library(shiny)
 library(ggplot2)
+  
   runApp(
 
     
