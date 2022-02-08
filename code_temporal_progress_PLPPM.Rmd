@@ -66,6 +66,10 @@ The other arguments are:
 
 ### Exponential
 
+$$ 
+\frac{dy}{dt} = r_Ey
+$$
+
 Let's simulate a curve resembling the exponential growth.
 
 #### Simulation
@@ -111,6 +115,10 @@ exp_data %>%
 
 ### Monomolecular
 
+$$ 
+\frac{dy}{dt} = r_M(K-y)
+$$
+
 The logic is exactly the same here.
 
 #### Simulation
@@ -138,6 +146,11 @@ mono_data %>%
 
 
 ### Logistic
+
+$$ 
+\frac{dy}{dt} = yr_L(K-y)
+$$
+
 #### Simulation
 ```{r}
 logi_data = sim_logistic(N = 100,      # Total time course of the epidemic
@@ -164,6 +177,11 @@ logi_data %>%
 
 
 ### Gompertz
+
+$$ 
+\frac{dy}{dt} = yr_G[ln(K)-ln(y)]
+$$
+
 #### Simulation
 ```{r}
 gompi_data = sim_gompertz(N = 100,      # Total time course of the epidemic
