@@ -20,13 +20,6 @@ if (!require(epifitter)) {
   install.packages("epifitter")
 }
 
-if (!require(tidyverse)) {
-  install.packages("tidyverse")
-}
-
-if (!require(shiny)) {
-  install.packages("shiny")
-}
 if (!require(ggthemes)) {
   install.packages("ggthemes")
 }
@@ -43,7 +36,8 @@ if (!require(cowplot)) {
 library(epifitter)
 library(tidyverse)
 library(ggthemes)
-library(shiny)
+
+#This code set the graph theme we`ll be using throughout the script
 theme_set(cowplot::theme_half_open())
 ```
 
@@ -52,11 +46,31 @@ theme_set(cowplot::theme_half_open())
 
 # Simulating disease progress curves
 
+The `sim_` functions, regardless of the model, require the same set of six arguments. By default, at least two arguments are required (the others have default values)
+
+-   `r`: apparent infection rate
+-   `n`: number of replicates
+
+When `n` is greater than one, replicated epidemics (e.g. replicated treatments) are produced and a level of noise (experimental error) should be set in the `alpha` argument. These two arguments combined set will generate `random_y` values, which will vary randomly across the defined number of replicates.
+
+The other arguments are:
+
+-   `N`: epidemic duration in time units
+-   `dt`: time (fixed) in units between two assessments
+-   `y0`: initial inoculum
+-   `alpha`: noise parameters for the replicates
+
+
+
 ## Models
 
 ### Exponential
 
+Let's simulate a curve resembling the exponential growth.
+
 #### Simulation
+
+
 
 ```{r}
 exp_data = sim_exponential(N = 100,      # Total time course of the epidemic
@@ -65,12 +79,25 @@ exp_data = sim_exponential(N = 100,      # Total time course of the epidemic
                            r = 0.1,     # Apparent infection rate
                            n = 1,       # Number or replicates or sample size for each time step
                            alpha = 0.2  # Variation parameter
-                           ) 
+                           )
+```
+
+A `data.frame` object is produced with four columns:
+
+-   `replicates`: the curve with the respective ID number
+-   `time`: the assessment time
+-   `y`: the simulated proportion of disease intensity
+-   `random_y`: randomly simulated proportion disease intensity based on the noise
+
+```{r}
 exp_data
 ```
 
 
 ##### Graph
+
+Use the [`ggplot2`](https://ggplot2.tidyverse.org/) package to build impressive graphics!
+
 ```{r}
 exp_data %>% 
   ggplot(aes(time, y)) +
@@ -83,6 +110,9 @@ exp_data %>%
 
 
 ### Monomolecular
+
+The logic is exactly the same here.
+
 #### Simulation
 ```{r}
 mono_data = sim_monomolecular(N = 100,      # Total time course of the epidemic
@@ -94,9 +124,11 @@ mono_data = sim_monomolecular(N = 100,      # Total time course of the epidemic
                               alpha = 0.2  # Variation parameter
                               )
 mono_data
+
 ```
 
 #### Graph
+
 ```{r}
 mono_data %>% 
   ggplot(aes(time, y)) +
@@ -174,12 +206,9 @@ data_models %>%
 
 
 
-#### Interact
-```{r eval=FALSE, include=T}
-source("sim_app.R")
+## Interact
 
-sim_app()
-```
+[Click here](https://alvesks.shinyapps.io/simDPC/){target="_blank"}
 
 
 
